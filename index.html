@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case File №9183 — The Lagos Lie</title>
+  <meta name="description" content="Kitopi InfoSec — Phishing simulation post-incident debrief. A forensic walkthrough of the Microsoft 365 sign-in alert phishing campaign." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Black+Ops+One&family=JetBrains+Mono:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=Bebas+Neue&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- =================================================================
+       FRAME — 600×600 contained experience
+       ================================================================= -->
+  <main class="frame" id="frame">
+
+    <!-- Subtle paper-grain + scanline overlay (always on top, pointer-events none) -->
+    <div class="grain" aria-hidden="true"></div>
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <!-- Persistent HUD (case meta + progress) -->
+    <header class="hud" id="hud" aria-hidden="true">
+      <div class="hud-left">
+        <span class="hud-dot"></span>
+        <span class="hud-label">CASE&nbsp;</span>
+        <span class="hud-id">№2026-04-27-9183</span>
+      </div>
+      <div class="hud-right">
+        <span class="hud-label">EVIDENCE&nbsp;</span>
+        <span class="hud-progress" id="hudProgress">— / —</span>
+        <button class="audio-btn" id="audioBtn" aria-label="Mute narration" title="Toggle narration">
+          <span class="ab-wave" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          <svg class="ab-mute" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2 6 L2 10 L5 10 L9 13 L9 3 L5 6 Z" fill="currentColor"/>
+            <line x1="11" y1="5" x2="14" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="14" y1="5" x2="11" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="disclaimer-toggle" id="disclaimerToggle" aria-label="Disclaimer">i</button>
+      </div>
+    </header>
+
+    <!-- Hidden audio element — narration source set per-scene by audio controller.
+         Drop your files in /audio as audio01.mp3 (or .mp4) through audio10.mp3.
+         Mapping (scene index 1..10 → audio01..audio10):
+            1  cover     → audio/audio01.{mp3,mp4}
+            2  exhibit   → audio/audio02.{mp3,mp4}
+            3  ev01      → audio/audio03.{mp3,mp4}
+            4  ev02      → audio/audio04.{mp3,mp4}
+            5  ev03      → audio/audio05.{mp3,mp4}
+            6  ev04      → audio/audio06.{mp3,mp4}
+            7  ev05      → audio/audio07.{mp3,mp4}
+            8  pause     → audio/audio08.{mp3,mp4}
+            9  manual    → audio/audio09.{mp3,mp4}
+           10  report    → audio/audio10.{mp3,mp4}
+         If an mp3 fails to load, the controller automatically falls back to mp4
+         (audio track only — the video is ignored). Quiz and closed scenes are silent. -->
+    <audio id="sceneAudio" preload="none"></audio>
+
+    <!-- Persistent navigation (themed) -->
+    <nav class="nav" id="nav" aria-hidden="true">
+      <button class="nav-btn nav-prev" id="navPrev" aria-label="Previous">
+        <span class="nav-glyph">◀</span>
+        <span class="nav-text">PREV</span>
+      </button>
+      <div class="nav-track" id="navTrack" aria-hidden="true"></div>
+      <button class="nav-btn nav-next" id="navNext" aria-label="Next">
+        <span class="nav-text">NEXT</span>
+        <span class="nav-glyph">▶</span>
+      </button>
+    </nav>
+
+    <!-- =================================================================
+         SCENE 0 — COLD OPEN
+         ================================================================= -->
+    <section class="scene scene-coldopen active" data-scene="coldopen">
+      <!-- Tap-to-begin gate — unlocks audio context before typewriter runs.
+           Auto-dismisses on first click/keypress. -->
+      <button class="co-gate" id="coGate" aria-label="Begin">
+        <span class="cog-glyph">▶</span>
+        <span class="cog-text">TAP TO BEGIN</span>
+        <span class="cog-hint">audio · narration · typing</span>
+      </button>
+
+      <div class="co-stack">
+        <div class="co-classification">
+          <span class="co-class-bar"></span>
+          <span class="co-class-text">RESTRICTED · INTERNAL · KITOPI INFOSEC</span>
+          <span class="co-class-bar"></span>
+        </div>
+
+        <div class="co-typewriter">
+          <p class="co-line" id="coLine1"><span class="caret">▍</span></p>
+          <p class="co-line" id="coLine2"></p>
+          <p class="co-line" id="coLine3"></p>
+        </div>
+
+        <div class="co-badge" id="coBadge">
+          <div class="co-badge-ring"></div>
+          <div class="co-badge-inner">
+            <div class="co-badge-eye">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M8 32 C 18 18, 46 18, 56 32 C 46 46, 18 46, 8 32 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="32" cy="32" r="8" fill="currentColor"/>
+                <circle cx="35" cy="29" r="2.5" fill="#0d0e10"/>
+              </svg>
+            </div>
+            <div class="co-badge-meta">
+              <span class="co-badge-title">INFOSEC</span>
+              <span class="co-badge-sub">DEBRIEF DIVISION</span>
+              <span class="co-badge-line"></span>
+              <span class="co-badge-id">FILE 2026-04-27-9183</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="co-cta" id="coStart">
+          <span class="co-cta-bracket">[</span>
+          <span class="co-cta-text">OPEN CASE FILE</span>
+          <span class="co-cta-bracket">]</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         SCENE 1 — CASE FILE COVER (manila folder)
+         ================================================================= -->
+    <section class="scene scene-cover" data-scene="cover">
+      <div class="folder" id="folder">
+        <div class="folder-tab">
+          <span class="folder-tab-text">CONFIDENTIAL</span>
+        </div>
+
+        <div class="folder-face">
+          <div class="folder-stamp folder-stamp-tl">
+            <span>EVIDENCE</span>
+            <span class="stamp-mini">EXHIBIT A</span>
+          </div>
+          <div class="folder-stamp folder-stamp-br stamp-red">
+            <span>CONFIDENTIAL</span>
+          </div>
+
+          <div class="folder-string"></div>
+
+          <div class="folder-meta">
+            <p class="folder-kicker">KITOPI · INFORMATION SECURITY</p>
+            <p class="folder-case">CASE №2026-04-27-9183</p>
+            <h1 class="folder-title">
+              THE<br/>
+              <em>LAGOS</em><br/>
+              LIE
+            </h1>
+            <p class="folder-sub">A forensic walkthrough of the<br/>suspicious sign-in alert that arrived in your inbox.</p>
+
+            <div class="folder-rule"></div>
+
+            <div class="folder-grid">
+              <div>
+                <span class="fg-k">SUBJECT</span>
+                <span class="fg-v">Kitopi Employee</span>
+              </div>
+              <div>
+                <span class="fg-k">FILED</span>
+                <span class="fg-v">27 APR 2026</span>
+              </div>
+              <div>
+                <span class="fg-k">VECTOR</span>
+                <span class="fg-v">M365 Identity Alert</span>
+              </div>
+              <div>
+                <span class="fg-k">SEVERITY</span>
+                <span class="fg-v fg-v-amber">HIGH</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="folder-tape folder-tape-1"></div>
+          <div class="folder-tape folder-tape-2"></div>
+        </div>
+
+        <p class="folder-cue">click folder to open ↗</p>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         SCENE 2 — THE EMAIL EXHIBIT
+         ================================================================= -->
+    <section class="scene scene-exhibit" data-scene="exhibit">
+      <div class="exhibit-head">
+        <span class="exhibit-num">EXHIBIT A</span>
+        <span class="exhibit-title">— THE MESSAGE</span>
+        <span class="exhibit-time">RECOVERED · 27 APR · 03:14 GMT</span>
+      </div>
+
+      <div class="exhibit-paper" id="exhibitPaper">
+        <div class="ex-stamp">FORGERY</div>
+
+        <div class="ex-mail">
+          <div class="ex-strip"></div>
+
+          <div class="ex-header">
+            <div class="ex-row">
+              <span class="ex-k">FROM</span>
+              <span class="ex-v ex-v-mono">Kitopi IT — Account Security &lt;m365-alerts@<span class="hl-red">kitopi-it.co</span>&gt;</span>
+            </div>
+            <div class="ex-row">
+              <span class="ex-k">SUBJ</span>
+              <span class="ex-v">[Action Required] Sign-in from <span class="hl-amber">Lagos, Nigeria</span> — Verify within 4 hours</span>
+            </div>
+          </div>
+
+          <div class="ex-body">
+            <div class="ex-alert">
+              <span class="ex-alert-icon">⚠</span>
+              <span class="ex-alert-text">HIGH SEVERITY · MICROSOFT 365 IDENTITY ALERT</span>
+            </div>
+            <h3 class="ex-headline">Unusual sign-in activity detected</h3>
+            <p class="ex-greet">Hi <span class="redact">[firstName]</span>,</p>
+            <p class="ex-para">We detected a sign-in to your Kitopi M365 account from a location and device that don't match your usual activity…</p>
+
+            <div class="ex-data">
+              <div><span>Date</span><strong>27 Apr 2026 · 03:14 GMT</strong></div>
+              <div><span>Location</span><strong class="hl-amber">Lagos, Nigeria</strong></div>
+              <div><span>IP</span><strong>102.89.34.221</strong></div>
+              <div><span>Device</span><strong>Windows 10 · Chrome 124</strong></div>
+            </div>
+
+            <p class="ex-warning">If you do not respond within <strong>4 hours</strong>, the session will be auto-quarantined…</p>
+
+            <div class="ex-cta">Download Sign-in Activity Report →</div>
+            <p class="ex-file">SignIn_Activity_Report.docx · 142 KB</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="exhibit-cue">Five tells. Each was deliberate.<br/>Begin examination ↘</p>
+    </section>
+
+    <!-- =================================================================
+         SCENES 3–7 — FIVE EVIDENCE CARDS
+         ================================================================= -->
+
+    <!-- EV-01 · THE SENDER -->
+    <section class="scene scene-ev" data-scene="ev01" data-ev="01">
+      <div class="ev-head">
+        <span class="ev-num">EVIDENCE 01</span>
+        <span class="ev-title">— THE SENDER</span>
+      </div>
+
+      <div class="ev-stage">
+        <p class="ev-prompt">Look at the address. Read it letter by letter.</p>
+
+        <div class="domain-card" id="domainCard">
+          <div class="domain-mag" id="domainMag" aria-hidden="true"></div>
+          <div class="domain-text">
+            <span class="dom-pre">m365-alerts@kitopi-it</span><span class="dom-tld" id="domTld">.co</span>
+          </div>
+          <!-- Spoiler with SVG arrow drawn from label up-right to the .co -->
+          <div class="domain-spoiler">
+            <svg class="ds-arrow-svg" viewBox="0 0 80 32" aria-hidden="true">
+              <path d="M 4 28 Q 30 28 56 8" class="ds-arrow-path"/>
+              <path d="M 50 4 L 60 6 L 56 14" class="ds-arrow-head"/>
+            </svg>
+            <span class="ds-label">.co — NOT .com</span>
+          </div>
+        </div>
+
+        <div class="ev-compare">
+          <div class="ev-compare-row">
+            <span class="evc-k">Looks like</span>
+            <span class="evc-v evc-v-bad">kitopi-it<span class="hl-red">.co</span></span>
+          </div>
+          <div class="ev-compare-row">
+            <span class="evc-k">Real domain</span>
+            <span class="evc-v evc-v-good">kitopi<span class="hl-green">.com</span></span>
+          </div>
+        </div>
+
+        <p class="ev-takeaway">
+          The brand name is the bait. The <em>suffix</em> is the truth.
+          Trust ends at the dot.
+        </p>
+      </div>
+
+      <div class="ev-stamp" id="evStamp01">FORGED&nbsp;DOMAIN</div>
+    </section>
+
+    <!-- EV-02 · THE CLOCK -->
+    <section class="scene scene-ev" data-scene="ev02" data-ev="02">
+      <div class="ev-head">
+        <span class="ev-num">EVIDENCE 02</span>
+        <span class="ev-title">— THE CLOCK</span>
+      </div>
+
+      <div class="ev-stage">
+        <p class="ev-prompt">"Verify within 4 hours, or your account will be auto-quarantined."</p>
+
+        <div class="clock" id="clock">
+          <svg class="clock-svg" viewBox="0 0 200 200" aria-hidden="true">
+            <circle cx="100" cy="100" r="92" class="clock-ring-bg"/>
+            <circle cx="100" cy="100" r="92" class="clock-ring-fg" id="clockRingFg"/>
+            <circle cx="100" cy="100" r="3" class="clock-pivot"/>
+            <line x1="100" y1="100" x2="100" y2="32" class="clock-hand-min" id="clockHandMin"/>
+            <line x1="100" y1="100" x2="100" y2="50" class="clock-hand-hr" id="clockHandHr"/>
+            <g class="clock-ticks">
+              <line x1="100" y1="14" x2="100" y2="22"/>
+              <line x1="100" y1="178" x2="100" y2="186"/>
+              <line x1="14" y1="100" x2="22" y2="100"/>
+              <line x1="178" y1="100" x2="186" y2="100"/>
+            </g>
+          </svg>
+          <div class="clock-readout">
+            <span class="clock-label">PRESSURE</span>
+            <span class="clock-value" id="clockValue">04:00:00</span>
+          </div>
+        </div>
+
+        <p class="ev-takeaway">
+          Real Microsoft alerts impose <em>no</em> deadline.
+          Urgency is not policy — it is a <span class="hl-amber">manipulation tactic</span>.
+        </p>
+      </div>
+
+      <div class="ev-stamp" id="evStamp02">URGENCY&nbsp;·&nbsp;BAIT</div>
+    </section>
+
+    <!-- EV-03 · THE GEOGRAPHY -->
+    <section class="scene scene-ev" data-scene="ev03" data-ev="03">
+      <div class="ev-head">
+        <span class="ev-num">EVIDENCE 03</span>
+        <span class="ev-title">— THE GEOGRAPHY</span>
+      </div>
+
+      <div class="ev-stage ev-stage-tight">
+        <p class="ev-prompt">A sign-in from <em>somewhere far</em> — chosen precisely because it is far.</p>
+
+        <div class="map-wrap">
+          <svg class="map-svg" viewBox="0 0 560 240" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <!-- Optional user-supplied world map (transparent PNG, equirectangular).
+                 Drop it in /assets/map.png and the dot grid auto-hides.
+                 If the file is missing, the dot grid below is the fallback. -->
+            <image id="mapImage" href="assets/map.png" x="0" y="0" width="560" height="240"
+                   preserveAspectRatio="xMidYMid meet" style="display:none"
+                   opacity="0.55"/>
+            <!-- Fallback: stylized dot grid (continent silhouettes) -->
+            <g class="map-dots" id="mapDots"></g>
+            <!-- Lagos pin — Western Nigeria, lat 6.45°N lng 3.4°E -->
+            <g class="map-pin map-pin-lagos" id="pinLagos">
+              <line x1="240" y1="130" x2="280" y2="130" class="pin-leader"/>
+              <circle cx="285" cy="130" r="4" class="pin-dot"/>
+              <circle cx="285" cy="130" r="11" class="pin-pulse"/>
+              <text x="236" y="133" class="pin-label pin-label-lagos">LAGOS</text>
+            </g>
+            <!-- Dubai pin — Persian Gulf, lat 25.27°N lng 55.3°E -->
+            <g class="map-pin map-pin-dubai" id="pinDubai">
+              <line x1="372" y1="99" x2="412" y2="99" class="pin-leader"/>
+              <circle cx="366" cy="99" r="4" class="pin-dot pin-dot-you"/>
+              <circle cx="366" cy="99" r="11" class="pin-pulse pin-pulse-you"/>
+              <text x="416" y="102" class="pin-label pin-label-you">YOU · DUBAI</text>
+            </g>
+          </svg>
+        </div>
+
+        <p class="ev-takeaway">
+          The location is bait — designed to <em>scare</em> you, not inform you.
+          A familiar city would never trigger the click.
+        </p>
+      </div>
+
+      <div class="ev-stamp" id="evStamp03">GEOGRAPHIC&nbsp;SHOCK</div>
+    </section>
+
+    <!-- EV-04 · THE WEAPON -->
+    <section class="scene scene-ev" data-scene="ev04" data-ev="04">
+      <div class="ev-head">
+        <span class="ev-num">EVIDENCE 04</span>
+        <span class="ev-title">— THE WEAPON</span>
+      </div>
+
+      <div class="ev-stage">
+        <p class="ev-prompt">A "Sign-in Activity Report" you were asked to <em>download</em>.</p>
+
+        <div class="file-flip" id="fileFlip">
+          <div class="file-inner">
+            <!-- Front: DOCX (the disguise) -->
+            <div class="file-face file-front">
+              <div class="file-icon">
+                <svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M8 4 H56 L72 20 V92 a4 4 0 0 1 -4 4 H8 a4 4 0 0 1 -4 -4 V8 a4 4 0 0 1 4 -4z" class="file-shape"/>
+                  <path d="M56 4 V20 H72" class="file-fold" fill="none"/>
+                  <text x="40" y="62" class="file-ext">DOCX</text>
+                </svg>
+              </div>
+              <p class="file-name">SignIn_Activity_Report.docx</p>
+              <p class="file-size">142 KB</p>
+            </div>
+            <!-- Back: Reality (executable / phishing site) -->
+            <div class="file-face file-back">
+              <div class="file-icon file-icon-bad">
+                <svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M8 4 H56 L72 20 V92 a4 4 0 0 1 -4 4 H8 a4 4 0 0 1 -4 -4 V8 a4 4 0 0 1 4 -4z" class="file-shape file-shape-bad"/>
+                  <path d="M56 4 V20 H72" class="file-fold" fill="none"/>
+                  <text x="40" y="62" class="file-ext file-ext-bad">EXE</text>
+                </svg>
+              </div>
+              <p class="file-name file-name-bad">credential_harvester.exe</p>
+              <p class="file-size file-size-bad">→ external phishing site</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="file-toggle" id="fileToggle">
+          <span class="ft-label">REVEAL TRUE PAYLOAD</span>
+          <span class="ft-arrow">⇆</span>
+        </button>
+
+        <p class="ev-takeaway">
+          Real Microsoft alerts <em>never</em> deliver attachments.
+          They direct you to <span class="mono-snip">portal.office.com</span> — and nowhere else.
+        </p>
+      </div>
+
+      <div class="ev-stamp" id="evStamp04">PAYLOAD&nbsp;DELIVERY</div>
+    </section>
+
+    <!-- EV-05 · THE SILENCE -->
+    <section class="scene scene-ev" data-scene="ev05" data-ev="05">
+      <div class="ev-head">
+        <span class="ev-num">EVIDENCE 05</span>
+        <span class="ev-title">— THE SILENCE</span>
+      </div>
+
+      <div class="ev-stage">
+        <p class="ev-prompt">Read what is missing.</p>
+
+        <div class="silence-card">
+          <p class="silence-quote">
+            <span class="silence-mark">"</span>Please do not reply to this address — replies are not monitored.<span class="silence-mark">"</span>
+          </p>
+          <p class="silence-attrib">— footer of the message you received</p>
+        </div>
+
+        <div class="silence-grid">
+          <div class="silence-cell">
+            <span class="silence-x">✕</span>
+            <span class="silence-k">No phone number</span>
+          </div>
+          <div class="silence-cell">
+            <span class="silence-x">✕</span>
+            <span class="silence-k">No Teams channel</span>
+          </div>
+          <div class="silence-cell">
+            <span class="silence-x">✕</span>
+            <span class="silence-k">No human contact</span>
+          </div>
+          <div class="silence-cell">
+            <span class="silence-x">✕</span>
+            <span class="silence-k">No way to verify</span>
+          </div>
+        </div>
+
+        <p class="ev-takeaway">
+          One path was offered, and that path was the one the attacker required.
+          Legitimate IT messages always furnish a way to <em>verify them out of band</em>.
+        </p>
+      </div>
+
+      <div class="ev-stamp" id="evStamp05">CHANNEL&nbsp;MONOPOLY</div>
+    </section>
+
+    <!-- =================================================================
+         SCENE 8 — THE PAUSE DOCTRINE
+         ================================================================= -->
+    <section class="scene scene-pause" data-scene="pause">
+      <div class="pause-head">
+        <span class="pause-kicker">— INTERLUDE —</span>
+        <h2 class="pause-title">Why intelligent people click.</h2>
+      </div>
+
+      <blockquote class="pull-quote">
+        <span class="pq-open">"</span>
+        The amygdala fires before the cortex has read the message.<br/>
+        The defence is not intelligence —<br/>
+        it is the <em class="pq-em">pause</em>.
+        <span class="pq-close">"</span>
+      </blockquote>
+
+      <div class="pause-stats">
+        <div class="ps-cell">
+          <span class="ps-num" id="psCount">60s</span>
+          <span class="ps-lbl">THE PAUSE</span>
+        </div>
+        <div class="ps-divider"></div>
+        <div class="ps-cell">
+          <span class="ps-num">3×</span>
+          <span class="ps-lbl">FEAR &gt; GREED</span>
+        </div>
+        <div class="ps-divider"></div>
+        <div class="ps-cell">
+          <span class="ps-num">1</span>
+          <span class="ps-lbl">CLICK · COMPROMISE</span>
+        </div>
+      </div>
+
+      <p class="pause-foot">A minute is short enough to be costless,<br/>and long enough to defeat urgency.</p>
+    </section>
+
+    <!-- =================================================================
+         SCENE 9 — THE FIELD MANUAL (4 protocols)
+         ================================================================= -->
+    <section class="scene scene-manual" data-scene="manual">
+      <div class="manual-head">
+        <span class="manual-kicker">FIELD MANUAL · 4 PROTOCOLS</span>
+        <h2 class="manual-title">Habits that defeat every fear-phish.</h2>
+      </div>
+
+      <ol class="manual-list" id="manualList">
+        <li class="ml-item" data-i="1">
+          <span class="ml-num">I.</span>
+          <div class="ml-body">
+            <h3 class="ml-h">PAUSE — sixty seconds.</h3>
+            <p class="ml-p">If the message will not survive a one-minute pause, it was never meant to.</p>
+          </div>
+        </li>
+        <li class="ml-item" data-i="2">
+          <span class="ml-num">II.</span>
+          <div class="ml-body">
+            <h3 class="ml-h">READ — letter by letter.</h3>
+            <p class="ml-p">Trust the suffix, not the brand. <span class="mono-snip">.co ≠ .com</span></p>
+          </div>
+        </li>
+        <li class="ml-item" data-i="3">
+          <span class="ml-num">III.</span>
+          <div class="ml-body">
+            <h3 class="ml-h">VERIFY — go direct.</h3>
+            <p class="ml-p">Open a new tab. Type <span class="mono-snip">portal.office.com</span> by hand. The truth is in your sign-in log.</p>
+          </div>
+        </li>
+        <li class="ml-item" data-i="4">
+          <span class="ml-num">IV.</span>
+          <div class="ml-body">
+            <h3 class="ml-h">REPORT — always.</h3>
+            <p class="ml-p">One report can protect a thousand colleagues. Reporting is the work.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- =================================================================
+         SCENE 10 — HOW TO REPORT (concrete)
+         ================================================================= -->
+    <section class="scene scene-report" data-scene="report">
+      <div class="report-head">
+        <span class="report-kicker">PROTOCOL IV · IN PRACTICE</span>
+        <h2 class="report-title">How to report a phish at Kitopi.</h2>
+      </div>
+
+      <div class="report-grid">
+
+        <!-- Step 1 — Report Message in Outlook -->
+        <div class="report-card">
+          <div class="rc-num">01</div>
+          <div class="rc-body">
+            <h3 class="rc-h">Use Outlook's Report Message → Phishing.</h3>
+            <p class="rc-p">In Outlook (desktop or web), open the suspicious message, click the <strong>Report</strong> icon in the toolbar, and choose <strong>Phishing</strong>. This sends the original headers and content directly to InfoSec for analysis.</p>
+
+            <!-- Faithful Outlook toolbar mock -->
+            <div class="ol-mock">
+              <div class="ol-toolbar">
+                <button class="ol-btn ol-btn-icon" aria-label="Reactions" tabindex="-1">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="7" r="0.8" fill="currentColor"/><circle cx="10" cy="7" r="0.8" fill="currentColor"/><path d="M5.5 9.5 Q8 11.5 10.5 9.5" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                </button>
+                <button class="ol-btn" tabindex="-1">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 3 L4 8 L9 13 M4 8 L13 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Reply</span>
+                </button>
+                <button class="ol-btn" tabindex="-1">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 3 L2 8 L7 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 3 L6 8 L11 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 8 L13 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  <span>Reply all</span>
+                </button>
+                <button class="ol-btn" tabindex="-1">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 3 L12 8 L7 13 M12 8 L3 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Forward</span>
+                </button>
+                <button class="ol-btn ol-btn-active" id="olReportBtn" tabindex="-1" aria-label="Report Message — Phishing selected">
+                  <svg viewBox="0 0 16 16" class="ol-report-svg" aria-hidden="true">
+                    <rect x="2" y="4" width="9" height="7" rx="0.6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M2 4 L6.5 8 L11 4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                    <path d="M9 10 L12 13 L14.5 7.5" fill="none" stroke="#d9b35f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg viewBox="0 0 8 4" class="ol-caret" aria-hidden="true"><path d="M1 1 L4 3 L7 1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="ol-btn ol-btn-icon" aria-label="Apps" tabindex="-1">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="4" height="4" rx="0.6" fill="currentColor"/><rect x="10" y="2" width="4" height="4" rx="0.6" fill="currentColor"/><rect x="2" y="10" width="4" height="4" rx="0.6" fill="currentColor"/><rect x="10" y="10" width="4" height="4" rx="0.6" fill="currentColor"/></svg>
+                </button>
+                <button class="ol-btn ol-btn-icon" aria-label="More items" tabindex="-1">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg>
+                </button>
+              </div>
+
+              <!-- Dropdown anchored under the Report button -->
+              <div class="ol-dropdown" id="olDropdown" role="menu" aria-label="Report Message">
+                <div class="ol-dd-header">Report Message</div>
+                <div class="ol-dd-item" role="menuitem">
+                  <span class="ol-dd-ico ol-dd-ico-junk"></span>
+                  <span>Junk</span>
+                </div>
+                <div class="ol-dd-item ol-dd-item-active" role="menuitem">
+                  <span class="ol-dd-ico ol-dd-ico-phish"></span>
+                  <span>Phishing</span>
+                </div>
+                <div class="ol-dd-item" role="menuitem">
+                  <span class="ol-dd-ico ol-dd-ico-notjunk"></span>
+                  <span>Not Junk</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 — Email fallback -->
+        <div class="report-card">
+          <div class="rc-num">02</div>
+          <div class="rc-body">
+            <h3 class="rc-h">Or forward as attachment.</h3>
+            <p class="rc-p">If the button isn't available, forward the message <em>as an attachment</em> (not inline) to <span class="mono-snip">security@kitopi.com</span>. Forwarding inline strips the headers we need to trace it.</p>
+
+            <div class="email-snip">
+              <span class="es-k">TO</span>
+              <span class="es-v mono-snip">security@kitopi.com</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 — Don't -->
+        <div class="report-card report-card-warn">
+          <div class="rc-num">03</div>
+          <div class="rc-body">
+            <h3 class="rc-h">Then — do nothing else.</h3>
+            <ul class="rc-dont">
+              <li><span class="dont-x">✕</span> Do not click the link.</li>
+              <li><span class="dont-x">✕</span> Do not download the file.</li>
+              <li><span class="dont-x">✕</span> Do not reply to the sender.</li>
+              <li><span class="dont-x">✕</span> Do not delete it before reporting.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="report-sla">A member of IT — Account Security will reach out within <strong>1 business hour</strong>.</p>
+    </section>
+
+    <!-- =================================================================
+         SCENE 11 — FIELD EXAM (interactive certification)
+         Intro → 5 missions → result · score 0–100 · 4-tier badge
+         ================================================================= -->
+    <section class="scene scene-exam" data-scene="exam">
+
+      <div class="exam-shell" id="examShell">
+
+        <!-- HUD: shared across all stages of the exam -->
+        <div class="exam-hud">
+          <div class="ex-brand">
+            <span class="ex-brand-dot"></span>
+            <span class="ex-brand-line1">FIELD EXAM</span>
+            <span class="ex-brand-line2">Security Operator Certification</span>
+          </div>
+          <div class="ex-progress">
+            <div class="ex-pips" id="examPips">
+              <span class="ex-pip" data-mission="1"><span class="ex-pip-num">01</span></span>
+              <span class="ex-pip" data-mission="2"><span class="ex-pip-num">02</span></span>
+              <span class="ex-pip" data-mission="3"><span class="ex-pip-num">03</span></span>
+              <span class="ex-pip" data-mission="4"><span class="ex-pip-num">04</span></span>
+              <span class="ex-pip" data-mission="5"><span class="ex-pip-num">05</span></span>
+            </div>
+            <div class="ex-score">
+              <span class="ex-score-label">SCORE</span>
+              <span class="ex-score-val" id="examScoreVal">0</span><span class="ex-score-of">/100</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="exam-stage" id="examStage">
+
+          <!-- ============================================================
+               INTRO — sets the stakes, single BEGIN button
+               ============================================================ -->
+          <div class="ex-pane ex-pane-intro" data-pane="intro">
+            <div class="intro-card">
+              <p class="intro-tag">— FIELD EXAM —</p>
+              <h2 class="intro-title">Five drills.<br/>One hundred points.</h2>
+              <p class="intro-body">
+                You've read the case file. Now we find out what stuck.<br/>
+                Each mission targets a specific reflex — spotting tells, parsing
+                domains, holding under pressure, refusing the bait.
+              </p>
+              <ul class="intro-list">
+                <li><span class="intro-num">I.</span><span class="intro-name">STAKEOUT</span><span class="intro-pts">25</span></li>
+                <li><span class="intro-num">II.</span><span class="intro-name">DOMAIN FORENSICS</span><span class="intro-pts">15</span></li>
+                <li><span class="intro-num">III.</span><span class="intro-name">RAPID TRIAGE</span><span class="intro-pts">25</span></li>
+                <li><span class="intro-num">IV.</span><span class="intro-name">THE PAUSE</span><span class="intro-pts">15</span></li>
+                <li><span class="intro-num">V.</span><span class="intro-name">RECONSTRUCTION</span><span class="intro-pts">20</span></li>
+              </ul>
+              <button class="ex-cta ex-cta-primary" id="examBegin">
+                <span>BEGIN EXAM</span><span class="cta-glyph">▸</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MISSION 01 — STAKEOUT (Spot the Phish)
+               ============================================================ -->
+          <div class="ex-pane ex-pane-mission" data-pane="m1" data-mission="1" hidden>
+            <header class="m-head">
+              <span class="m-num">MISSION 01</span>
+              <h3 class="m-title">STAKEOUT</h3>
+              <p class="m-brief">An email landed in a colleague's inbox. Find the tells.</p>
+              <p class="m-meta"><span id="spotProgress">0 / 3 found</span><span class="m-meta-sep">·</span><span class="m-meta-mute">3 of 5 needed for full marks</span></p>
+            </header>
+
+            <div class="stakeout-mail" id="stakeoutMail">
+              <div class="so-bar">
+                <span class="so-from">Kitopi IT &lt;m365-alerts@<button class="so-tell" data-tell="domain" data-points="6" data-explain=".co — not .com. The brand looks right but the suffix is the truth.">kitopi-it.co</button>&gt;</span>
+                <span class="so-time">Today · 03:14</span>
+              </div>
+              <div class="so-subj"><strong>[Action Required]</strong> Sign-in from <button class="so-tell" data-tell="urgency" data-points="6" data-explain="Real Microsoft alerts impose no deadline. Urgency is a manipulation tactic.">Lagos, Nigeria — Verify within 4 hours</button></div>
+              <div class="so-body">
+                <p>Hi <button class="so-tell" data-tell="generic" data-points="5" data-explain="Generic greeting. Real IT systems address you by your full name from AD.">Employee</button>,</p>
+                <p>We detected a sign-in to your account from a location and device that don't match your usual activity. If you do not respond within 4 hours, the session will be auto-quarantined and you will lose access.</p>
+                <p>Please review the attached <button class="so-tell" data-tell="attach" data-points="5" data-explain="Real Microsoft alerts never deliver attachments. They link to portal.office.com.">SignIn_Activity_Report.docx</button> to confirm your identity.</p>
+                <p class="so-footer">Please do not reply to this address — <button class="so-tell" data-tell="silence" data-points="3" data-explain="No out-of-band channel. Legitimate IT always provides a way to verify outside the message.">replies are not monitored</button>.</p>
+              </div>
+            </div>
+
+            <div class="m-feedback" id="spotFeedback"></div>
+
+            <div class="m-foot">
+              <button class="ex-cta ex-cta-ghost" id="spotReveal" hidden>SHOW ALL 5 TELLS</button>
+              <button class="ex-cta" id="spotNext" disabled>NEXT MISSION ▸</button>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MISSION 02 — DOMAIN FORENSICS
+               ============================================================ -->
+          <div class="ex-pane ex-pane-mission" data-pane="m2" data-mission="2" hidden>
+            <header class="m-head">
+              <span class="m-num">MISSION 02</span>
+              <h3 class="m-title">DOMAIN FORENSICS</h3>
+              <p class="m-brief">Four URLs. One is the imposter. Find it.</p>
+              <p class="m-meta"><span class="m-meta-mute">Read the rightmost segment before the slash.</span></p>
+            </header>
+
+            <div class="forensics-grid" id="forensicsGrid">
+              <button class="fr-card" data-id="u1" data-truth="legit">
+                <span class="fr-tag">URL · A</span>
+                <span class="fr-url">https://login.microsoftonline.com/common/oauth2</span>
+              </button>
+              <button class="fr-card" data-id="u2" data-truth="phish" data-explain="Subdomain trick — the real domain is .com.id (Indonesia), not Microsoft.">
+                <span class="fr-tag">URL · B</span>
+                <span class="fr-url">https://login.microsoft.com.id/verify</span>
+              </button>
+              <button class="fr-card" data-id="u3" data-truth="legit">
+                <span class="fr-tag">URL · C</span>
+                <span class="fr-url">https://portal.office.com/account/security</span>
+              </button>
+              <button class="fr-card" data-id="u4" data-truth="legit">
+                <span class="fr-tag">URL · D</span>
+                <span class="fr-url">https://account.microsoft.com/profile</span>
+              </button>
+            </div>
+
+            <div class="m-feedback" id="forensicsFeedback"></div>
+
+            <div class="m-foot">
+              <button class="ex-cta" id="forensicsNext" disabled>NEXT MISSION ▸</button>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MISSION 03 — RAPID TRIAGE
+               ============================================================ -->
+          <div class="ex-pane ex-pane-mission" data-pane="m3" data-mission="3" hidden>
+            <header class="m-head">
+              <span class="m-num">MISSION 03</span>
+              <h3 class="m-title">RAPID TRIAGE</h3>
+              <p class="m-brief">Sort each message. Tap a card, then tap a verdict.</p>
+              <p class="m-meta"><span id="triageProgress">0 / 4 sorted</span></p>
+            </header>
+
+            <div class="triage-stage">
+              <div class="triage-stack" id="triageStack">
+                <button class="rt-card" data-id="t1" data-truth="phish" data-explain="amaz0n with a zero — classic homoglyph phish.">
+                  <span class="rt-from">noreply@<strong>amaz0n-billing.com</strong></span>
+                  <span class="rt-subj">Your invoice is overdue — pay now</span>
+                </button>
+                <button class="rt-card" data-id="t2" data-truth="safe" data-explain="atlassian.net is the genuine Jira hostname for Kitopi tenants.">
+                  <span class="rt-from">jira-noreply@<strong>kitopi.atlassian.net</strong></span>
+                  <span class="rt-subj">SEC-148: assigned to you</span>
+                </button>
+                <button class="rt-card" data-id="t3" data-truth="suspicious" data-explain="Real domain — but unsolicited link request to payroll. Verify out of band.">
+                  <span class="rt-from">hr-team@<strong>kitopi.com</strong></span>
+                  <span class="rt-subj">Updated payroll — open the link</span>
+                </button>
+                <button class="rt-card" data-id="t4" data-truth="phish" data-explain="docusgn (no 'i') — typo-squat for DocuSign.">
+                  <span class="rt-from">notify@<strong>docusgn.net</strong></span>
+                  <span class="rt-subj">Contract awaiting your signature</span>
+                </button>
+              </div>
+
+              <div class="triage-bins">
+                <button class="rt-bin rt-bin-safe"        data-bin="safe"        disabled><span class="rt-bin-glyph">✓</span><span>SAFE</span></button>
+                <button class="rt-bin rt-bin-suspicious"  data-bin="suspicious"  disabled><span class="rt-bin-glyph">?</span><span>SUSPICIOUS</span></button>
+                <button class="rt-bin rt-bin-phish"       data-bin="phish"       disabled><span class="rt-bin-glyph">✕</span><span>PHISH</span></button>
+              </div>
+            </div>
+
+            <div class="m-feedback" id="triageFeedback"></div>
+
+            <div class="m-foot">
+              <button class="ex-cta" id="triageNext" disabled>NEXT MISSION ▸</button>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MISSION 04 — THE PAUSE
+               ============================================================ -->
+          <div class="ex-pane ex-pane-mission" data-pane="m4" data-mission="4" hidden>
+            <header class="m-head">
+              <span class="m-num">MISSION 04</span>
+              <h3 class="m-title">THE PAUSE</h3>
+              <p class="m-brief"><strong>Don't</strong> click the alert. Hold for <strong>5 seconds</strong>.</p>
+              <p class="m-meta m-meta-mute">If the message is real, it survives the pause. Always.</p>
+            </header>
+
+            <div class="pause-stage" id="pauseStage">
+              <div class="pause-fake-alert" id="pauseAlert">
+                <span class="pa-icon">!</span>
+                <span class="pa-title">Account compromised — verify in 4 hours</span>
+                <button class="pa-button" id="pauseTrap">VERIFY NOW</button>
+              </div>
+              <div class="pause-ring" aria-hidden="true">
+                <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="pr-bg"/><circle cx="50" cy="50" r="44" class="pr-fg" id="pauseRingFg"/></svg>
+                <span class="pause-counter" id="pauseCounter">5</span>
+              </div>
+            </div>
+
+            <div class="m-feedback" id="pauseFeedback"></div>
+
+            <div class="m-foot">
+              <button class="ex-cta" id="pauseNext" disabled>NEXT MISSION ▸</button>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MISSION 05 — RECONSTRUCTION
+               ============================================================ -->
+          <div class="ex-pane ex-pane-mission" data-pane="m5" data-mission="5" hidden>
+            <header class="m-head">
+              <span class="m-num">MISSION 05</span>
+              <h3 class="m-title">RECONSTRUCTION</h3>
+              <p class="m-brief">A phish lands. Place the response steps in order.</p>
+              <p class="m-meta m-meta-mute">Tap a tile to fill the next slot. Tap a slot to remove.</p>
+            </header>
+
+            <ol class="recon-target" id="reconTarget">
+              <li class="rc-slot" data-pos="1"><span class="rc-num">I</span><span class="rc-text">—</span></li>
+              <li class="rc-slot" data-pos="2"><span class="rc-num">II</span><span class="rc-text">—</span></li>
+              <li class="rc-slot" data-pos="3"><span class="rc-num">III</span><span class="rc-text">—</span></li>
+              <li class="rc-slot" data-pos="4"><span class="rc-num">IV</span><span class="rc-text">—</span></li>
+            </ol>
+
+            <div class="recon-bank" id="reconBank">
+              <button class="rc-tile" data-key="reply">Reply asking if it's real</button>
+              <button class="rc-tile" data-key="pause">Pause &amp; read the address</button>
+              <button class="rc-tile" data-key="verify">Verify via portal.office.com</button>
+              <button class="rc-tile" data-key="report">Report via Outlook → Phishing</button>
+              <button class="rc-tile" data-key="leave">Leave the message untouched</button>
+            </div>
+
+            <div class="m-feedback" id="reconFeedback"></div>
+
+            <div class="m-foot">
+              <button class="ex-cta" id="reconNext" disabled>SEE RESULT ▸</button>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               RESULT — animated score, badge, breakdown, retake/close
+               ============================================================ -->
+          <div class="ex-pane ex-pane-result" data-pane="result" hidden>
+            <div class="result-card" id="resultCard">
+              <div class="rc-corner rc-corner-tl"></div>
+              <div class="rc-corner rc-corner-tr"></div>
+              <div class="rc-corner rc-corner-bl"></div>
+              <div class="rc-corner rc-corner-br"></div>
+
+              <p class="rc-kicker">— FIELD EXAM COMPLETE —</p>
+
+              <div class="rc-score">
+                <span class="rc-score-num" id="resultPts">0</span>
+                <span class="rc-score-of">/ 100</span>
+              </div>
+
+              <div class="rc-badge" id="resultBadge">
+                <span class="rb-rule"></span>
+                <span class="rb-rank" id="resultRank">RECRUIT</span>
+                <span class="rb-cert" id="resultCert">Phishing Defence · Tier I</span>
+                <span class="rb-rule"></span>
+              </div>
+
+              <ul class="rc-breakdown" id="resultBreakdown">
+                <li data-key="spot"><span class="rcb-name">I. Stakeout</span><span class="rcb-pts" data-id="spot">0/25</span></li>
+                <li data-key="forensics"><span class="rcb-name">II. Domain Forensics</span><span class="rcb-pts" data-id="forensics">0/15</span></li>
+                <li data-key="triage"><span class="rcb-name">III. Rapid Triage</span><span class="rcb-pts" data-id="triage">0/25</span></li>
+                <li data-key="pause"><span class="rcb-name">IV. The Pause</span><span class="rcb-pts" data-id="pause">0/15</span></li>
+                <li data-key="recon"><span class="rcb-name">V. Reconstruction</span><span class="rcb-pts" data-id="recon">0/20</span></li>
+              </ul>
+
+              <p class="rc-summary" id="resultSummary"></p>
+
+              <div class="rc-meta">
+                <span>CERT ID</span>
+                <span id="resultCertId" class="rc-meta-mono">—</span>
+                <span class="rc-meta-sep">·</span>
+                <span>FILED</span>
+                <span id="resultDate" class="rc-meta-mono">—</span>
+              </div>
+
+              <div class="rc-row">
+                <button class="ex-cta ex-cta-ghost" id="examRetry">↻ RETAKE</button>
+                <button class="ex-cta ex-cta-primary" id="examFinish">CLOSE THE CASE ▸</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =================================================================
+         SCENE 12 — CASE CLOSED
+         ================================================================= -->
+    <section class="scene scene-closed" data-scene="closed">
+      <div class="closed-frame">
+        <div class="closed-corners">
+          <span class="cc cc-tl"></span>
+          <span class="cc cc-tr"></span>
+          <span class="cc cc-bl"></span>
+          <span class="cc cc-br"></span>
+        </div>
+
+        <p class="closed-kicker">— FILE 2026-04-27-9183 —</p>
+
+        <div class="closed-stamp" id="closedStamp">
+          <span class="cs-line cs-line-1">CASE</span>
+          <span class="cs-line cs-line-2">CLOSED</span>
+          <span class="cs-rule"></span>
+          <span class="cs-sub">SUBJECT · TRAINED</span>
+        </div>
+
+        <p class="closed-body">
+          The next time you see a fear-phish in the wild,<br/>
+          you will <em>see</em> it.<br/>
+          <span class="closed-body-thin">That is the whole point of this exercise.</span>
+        </p>
+
+        <p class="closed-sign">
+          Yours, in security —<br/>
+          <span class="closed-sign-name">KITOPI · INFORMATION SECURITY</span><br/>
+          <span class="closed-sign-sub">Information Security · Dubai</span>
+        </p>
+
+        <button class="closed-restart" id="closedRestart">
+          <span>↻</span> REWIND CASE FILE
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         DISCLAIMER (always available, opens via "i" button in HUD)
+         ================================================================= -->
+    <div class="disclaimer" id="disclaimer" hidden>
+      <div class="disc-inner">
+        <h4>Disclaimer.</h4>
+        <p>The message which preceded this debrief was a phishing simulation conducted by Kitopi InfoSec for the purpose of security awareness. It was not a real message from Microsoft, Kitopi IT, or the proprietor of any trademark or logo featured. Any trademarks and logos used remain the property of their respective owners and are in no way associated, affiliated, sponsored, or endorsed by them. No credentials, files, or personal data were collected, and no malicious activity occurred — only the click event was logged for training analytics.</p>
+        <button class="disc-close" id="disclaimerClose">CLOSE</button>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
